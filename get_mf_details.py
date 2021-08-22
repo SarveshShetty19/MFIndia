@@ -66,7 +66,9 @@ class MutualFunds:
     def get_all_metrics_by_scheme_category(self, scheme_category, sort_field, numcount=5):
         self.all_metrics = self.get_all_metrics('cagr(5yrs)', 'max')
         self.filt = self.all_metrics['scheme_category'] == scheme_category
+        print(self.all_metrics['scheme_category'].value_counts())
         self.all_metrics = self.all_metrics.loc[self.filt]
+        print(self.all_metrics)
         return self.all_metrics.sort_values(by=sort_field, ascending=False).head(numcount)
 
     def get_all_metrics_by_scheme_type(self, scheme_type, sort_field, numcount=5):
@@ -124,8 +126,6 @@ class MutualFunds:
 
         self.scheme_performance = self.merge_dataframes(self.dataframes)
 
-        print(self.scheme_performance)
-        print(self.scheme_performance.columns)
 
         self.scheme_performance.rename(columns={'nav_0yrs': 'nav', 'business_date_0yrs': 'business_date'}, inplace=True)
 
@@ -147,7 +147,6 @@ class MutualFunds:
         return self.scheme_performance
 
     def add_scheme_details(self, scheme_dataframe):
-
         self.get_scheme_details = ''' select * from {}'''.format(sql_parser.mutual_funds_scheme)
         self.scheme_details = pd.read_sql(self.get_scheme_details, self.engine)
 
@@ -156,14 +155,10 @@ class MutualFunds:
                                              on=['scheme_code', 'scheme_nav_name'])
         return self.added_scheme_details
 
-    def add_suffix(self, dataframe, suffix):
-        dataframe.columns = [str(x) + str(suffix) for x in dataframe.columns]
-        return dataframe
-
     def merge_dataframes(self, dataframes):
         merge_tables = dataframes[0]
         for i in range(len(dataframes) - 1):
-            merge_tables = pd.merge(merge_tables, dataframes[i + 1], on=['scheme_nav_name', 'scheme_code'],
+            merge_tables = pd.merge(merge_tables, dataframes[i + 1],how='left', on=['scheme_nav_name', 'scheme_code'],
                                     suffixes=('_' + str(i) + 'yrs', '_' + str(i + 1) + 'yrs'))
         return merge_tables
 
@@ -183,4 +178,5 @@ if __name__ == "__main__":
     mf_pd = mf.get_scheme_metrics(mutual_funds_list)
     all_mf = mf.get_all_metrics('cagr(5yrs)', 300)
     scheme_history = mf.get_mf_history_with_scheme_details(mutual_funds_list)
-    # elss = mf.get_all_metrics_by_scheme_category('ELSS','cagr(5yrs)')
+    elss = mf.get_all_metrics_by_scheme_category('Growth','cagr(5yrs)')
+    print(elss)
