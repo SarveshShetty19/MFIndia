@@ -65,6 +65,8 @@ class MutualFundsDownload:
         self.existing_scheme_codes = self.existing_scheme_codes["code"].to_list()
         self.filt_schemes = self.scheme_data['code'].isin(self.existing_scheme_codes)
         self.add_scheme_data = self.scheme_data.loc[~self.filt_schemes]
+        self.add_scheme_data['launch_date'] = pd.to_datetime(self.add_scheme_data['launch_date'], format='%d-%b-%Y')
+        self.add_scheme_data['_closure_date'] = pd.to_datetime(self.add_scheme_data['_closure_date'], format='%d-%b-%Y')
         self.add_scheme_data.to_sql(sql_parser.mutual_funds_scheme, self.engine, index=False, if_exists='append')
 
 

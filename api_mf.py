@@ -29,5 +29,28 @@ def api_mf(mflist='Axis Long Term Equity Fund - Direct Plan - Growth Option'):
     all_mf = mf.get_scheme_metrics(mflist)
     return all_mf.to_html()
 
+@app.route('/allmf_scheme_category', methods=['GET'])
+@app.route('/allmf_scheme_category/<scheme_category>', methods=['GET'])
+@app.route('/allmf_scheme_category/<scheme_category>/<header>', methods=['GET'])
+@app.route('/allmf_scheme_category/<scheme_category>/<header>/<sort_field>', methods=['GET'])
+def get_all_metrics_by_scheme_category(scheme_category='ELSS',header=5,sort_field='cagr(5yrs)'):
+    mf = get_mf_details.MutualFunds()
+    print(header)
+    print(sort_field)
+    all_mf = mf.get_all_metrics_by_scheme_category(scheme_category,sort_field,int(header))
+    return all_mf.to_html()
+
+@app.route('/allmf_scheme_type', methods=['GET'])
+@app.route('/allmf_scheme_type/<scheme_type>', methods=['GET'])
+@app.route('/allmf_scheme_type/<scheme_type>/<header>', methods=['GET'])
+@app.route('/allmf_scheme_type/<scheme_type>/<header>/<sort_field>', methods=['GET'])
+def get_all_metrics_by_scheme_type(scheme_type='Close Ended',header=5,sort_field='cagr(5yrs)'):
+    mf = get_mf_details.MutualFunds()
+    print(header)
+    print(sort_field)
+    all_mf = mf.get_all_metrics_by_scheme_type(scheme_type,sort_field,int(header))
+    return all_mf.to_html()
+
+
 if __name__ == "__main__":
     app.run()
