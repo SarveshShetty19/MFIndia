@@ -186,8 +186,8 @@ class MutualFunds:
         return merge_tables
 
     def refine_columns(self, scheme_details):
-        mf_columns = ['amc', 'scheme_code', 'scheme_nav_name', 'scheme_type', 'scheme_category', 'business_date', 'nav',
-                      'business_date_3yrs', 'cagr(3yrs)', 'business_date_5yrs', 'cagr(5yrs)', 'scheme_minimum_amount',
+        mf_columns = ['amc', 'scheme_code', 'scheme_nav_name', 'scheme_type', 'scheme_category', 'business_date', 'nav','business_date_1yrs', 'cagr(1yrs)', 'business_date_2yrs', 'cagr(2yrs)',
+                      'business_date_3yrs', 'cagr(3yrs)','business_date_4yrs', 'cagr(4yrs)', 'business_date_5yrs', 'cagr(5yrs)', 'scheme_minimum_amount',
                       'launch_date', '_closure_date']
         return scheme_details.loc[:, mf_columns]
 
@@ -199,4 +199,4 @@ if __name__ == "__main__":
     mf_pd = mf.get_scheme_metrics(mutual_funds_list)
     all_mf = mf.get_all_metrics('cagr(5yrs)', 300)
     scheme_history = mf.get_mf_history_with_scheme_details(mutual_funds_list)
-    elss = mf.get_all_metrics_by_scheme_category('ELSS','cagr(5yrs)')
+    #elss = mf.get_all_metrics_by_scheme_category('ELSS','cagr(5yrs)')
