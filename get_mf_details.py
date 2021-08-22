@@ -1,16 +1,7 @@
 import pandas as pd
-import datetime
-import sqlalchemy as sql
-import pyodbc
 from sql_parser import sql_parser
 import datetime
-# BDay is business day, not birthday...
 from pandas.tseries.offsets import BDay
-from functools import reduce
-
-today = datetime.date.today()
-business_date = (today - BDay()).strftime('%Y-%m-%d')
-
 
 class MutualFunds:
 
@@ -121,12 +112,6 @@ class MutualFunds:
         ''' This function is used to calculate cagr over 3 business days i.e today,3 years ago and 5 years ago '''
 
         # Filter out the dataframe on 3 business day i.e today,3 years ago and 5 years ago
-        self.todays_scheme_details = pd.DataFrame()
-        self.scheme_details_one_years_ago = pd.DataFrame()
-        self.scheme_details_two_years_ago = pd.DataFrame()
-        self.scheme_details_three_years_ago = pd.DataFrame()
-        self.scheme_details_four_years_ago = pd.DataFrame()
-        self.scheme_details_five_years_ago = pd.DataFrame()
         self.todays_scheme_details, self.scheme_details_one_years_ago, self.scheme_details_two_years_ago, self.scheme_details_three_years_ago, self.scheme_details_four_years_ago, self.scheme_details_five_years_ago = map(
             lambda business_time: self.filter_on_business_date(scheme_dataframe, business_time), self.business_days)
 
