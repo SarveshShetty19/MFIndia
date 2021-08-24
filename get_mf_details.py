@@ -2,6 +2,7 @@ import pandas as pd
 from sql_parser import sql_parser
 import datetime
 from pandas.tseries.offsets import BDay
+import re
 
 class MutualFunds:
 
@@ -50,7 +51,7 @@ class MutualFunds:
 
         ''' Gives perfroamnce metrics for all mutual funds limited to the numcount value
         and 3 business days i.e today,3 years ago and 5 years ago'''
-
+        self.sort_field = sort_field
         self.get_all_mf_performance = '''select business_date,nav,scheme_nav_name,scheme_code from {} where business_date in ({})'''.format(
             sql_parser.mutual_funds,
             ",".join("?" for _ in self.business_days))
@@ -59,20 +60,19 @@ class MutualFunds:
         self.all_scheme_performance_calc = self.add_scheme_details(self.all_scheme_performance_calc)
         self.all_scheme_performance_calc = self.refine_columns(self.all_scheme_performance_calc)
 
-        return self.all_scheme_performance_calc.sort_values(by=sort_field,
+        print(self.all_scheme_performance_calc.columns)
+        return self.all_scheme_performance_calc.sort_values(by=self.sort_field,
                                                             ascending=False) if numcount == 'max' else self.all_scheme_performance_calc.sort_values(
-            by=sort_field, ascending=False).head(numcount)
+            by=self.sort_field, ascending=False).head(numcount)
 
     def get_all_metrics_by_scheme_category(self, scheme_category, sort_field, numcount=5):
-        self.all_metrics = self.get_all_metrics('cagr(5yrs)', 'max')
+        self.all_metrics = self.get_all_metrics(sort_field, 'max')
         self.filt = self.all_metrics['scheme_category'] == scheme_category
-        print(self.all_metrics['scheme_category'].value_counts())
         self.all_metrics = self.all_metrics.loc[self.filt]
-        print(self.all_metrics)
         return self.all_metrics.sort_values(by=sort_field, ascending=False).head(numcount)
 
     def get_all_metrics_by_scheme_type(self, scheme_type, sort_field, numcount=5):
-        self.all_metrics = self.get_all_metrics('cagr(5yrs)', 'max')
+        self.all_metrics = self.get_all_metrics('return(5yrs)', 'max')
         self.filt = self.all_metrics['scheme_type'] == scheme_type
         self.all_metrics = self.all_metrics.loc[self.filt]
         return self.all_metrics.sort_values(by=sort_field, ascending=False).head(numcount)
@@ -100,7 +100,7 @@ class MutualFunds:
         mf_columns = ['amc', 'scheme_code', 'scheme_nav_name', 'scheme_type', 'scheme_category', 'business_date', 'nav',
                       'scheme_minimum_amount', 'launch_date', '_closure_date']
 
-        return mf_with_scheme_details.loc[:, mf_columns]
+        return mf_with_scheme_details.loc[:, mf_columns].sort_values(by='business_date',ascending=False)
 
     def filter_on_business_date(self, df, business_date):
         ''' filters a dataframe for a particular business_date '''
@@ -163,10 +163,12 @@ class MutualFunds:
         return merge_tables
 
     def refine_columns(self, scheme_details):
+        scheme_details.columns = [re.sub('cagr\((\w+)\)','return(\g<1>)',x) for x in scheme_details.columns ]
+        scheme_details.rename(columns = {'return(1yrs)':'return(1yr)'},inplace=True)
         mf_columns = ['amc', 'scheme_code', 'scheme_nav_name', 'scheme_type', 'scheme_category', 'business_date', 'nav',
-                      'business_date_1yrs', 'cagr(1yrs)', 'business_date_2yrs', 'cagr(2yrs)',
-                      'business_date_3yrs', 'cagr(3yrs)', 'business_date_4yrs', 'cagr(4yrs)', 'business_date_5yrs',
-                      'cagr(5yrs)', 'scheme_minimum_amount',
+                      'business_date_1yrs', 'return(1yr)', 'business_date_2yrs', 'return(2yrs)',
+                      'business_date_3yrs', 'return(3yrs)', 'business_date_4yrs', 'return(4yrs)', 'business_date_5yrs',
+                      'return(5yrs)', 'scheme_minimum_amount',
                       'launch_date', '_closure_date']
         return scheme_details.loc[:, mf_columns]
 
@@ -175,8 +177,8 @@ if __name__ == "__main__":
     mf = MutualFunds()
     mutual_funds_list = ['Axis Liquid Fund - Direct Plan - Daily IDCW',
                          'UTI - Master Equity Plan Unit Scheme']
-    mf_pd = mf.get_scheme_metrics(mutual_funds_list)
-    all_mf = mf.get_all_metrics('cagr(5yrs)', 300)
-    scheme_history = mf.get_mf_history_with_scheme_details(mutual_funds_list)
-    elss = mf.get_all_metrics_by_scheme_category('Growth','cagr(5yrs)')
-    print(elss)
+    #mf_pd = mf.get_scheme_metrics(mutual_funds_list)
+    all_mf = mf.get_all_metrics('return(5yrs)', 300)
+    #scheme_history = mf.get_mf_history_with_scheme_details(mutual_funds_list)
+   # elss = mf.get_all_metrics_by_scheme_category('Growth','%return(5yrs)')
+    #print(elss)
