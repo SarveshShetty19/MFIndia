@@ -31,7 +31,9 @@ class MutualFundsDownload:
         #Append the data for the dates where the data for mutual funds is missing.
         while self.start_date != self.end_date:
             if self.start_date.weekday() != 5 and self.start_date.weekday() != 6 and self.start_date not in self.existing_mf_dates_list:
+                self.delete_data(self.start_date)
                 self.download_data(self.start_date)
+                self.start_date = self.start_date + datetime.timedelta(days=1)
                 self.__count += 1
             else:
                 self.start_date = self.start_date + datetime.timedelta(days=1)
@@ -50,10 +52,16 @@ class MutualFundsDownload:
         self.add_scheme_data['_closure_date'] = pd.to_datetime(self.add_scheme_data['_closure_date'], format='%d-%b-%Y')
         self.add_scheme_data.to_sql(sql_parser.mutual_funds_scheme, self.engine, index=False, if_exists='append')
 
-    def download_data(self,day):
+    def delete_data(self,day):
         self.day = day
+        print("Deleting data for day {}".format(self.day))
         self.delete_data = ''' delete from mf_india where business_date = '{}' '''.format(self.day)
         self.engine.execute(self.delete_data)
+
+
+    def download_data(self,day):
+        self.day = day
+        print("Downloading  data for day {}".format(self.day))
         self.download_mf_data_url = self.__mf_data_url + str(self.day)
         self.mf_data_frame = pd.read_csv(self.download_mf_data_url, sep=';', na_values=self.na)
         self.mf_data_frame = pd.read_csv(self.download_mf_data_url, sep=';', na_values=self.na)
@@ -79,6 +87,6 @@ class MutualFundsDownload:
 
 if __name__ == "__main__":
      mf = MutualFundsDownload()
-     #mf.download_mutual_fund_data(15)
-    # mf.download_scheme_details()
-     mf.download_data('2021-08-19')
+     mf.download_mutual_fund_data(15)
+     mf.download_scheme_details()
+     #mf.download_data('2021-08-19')

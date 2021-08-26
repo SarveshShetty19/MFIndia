@@ -13,9 +13,9 @@ def home():
 
 
 # A route to return all of the available entries in our catalog.
-@app.route('/mf_performance', methods=['GET'])
-@app.route('/mf_performance/<header>', methods=['GET'])
-@app.route('/mf_performance/<header>/<sort_field>', methods=['GET'])
+@app.route('/performance', methods=['GET'])
+@app.route('/performance/<header>', methods=['GET'])
+@app.route('/performance/<header>/<sort_field>', methods=['GET'])
 def api_all(header=5,sort_field='return(5yrs)'):
     mf = get_mf_details.MutualFunds()
     print(header)
@@ -23,18 +23,18 @@ def api_all(header=5,sort_field='return(5yrs)'):
     all_mf = mf.get_all_metrics(sort_field,int(header))
     return all_mf.to_html()
 
-@app.route('/mf_scheme_performance', methods=['GET'])
-@app.route('/mf_scheme_performance/<mflist>', methods=['GET'])
+@app.route('/scheme_performance', methods=['GET'])
+@app.route('/scheme_performance/<mflist>', methods=['GET'])
 def api_single_mf(mflist='Axis Long Term Equity Fund - Direct Plan - Growth Option'):
     mf = get_mf_details.MutualFunds()
     mflist = mflist.split(",")
     all_mf = mf.get_scheme_metrics(mflist)
     return all_mf.to_html()
 
-@app.route('/mf_performance_category', methods=['GET'])
-@app.route('/mf_performance_category/<scheme_category>', methods=['GET'])
-@app.route('/mf_performance_category/<scheme_category>/<header>', methods=['GET'])
-@app.route('/mf_performance_category/<scheme_category>/<header>/<sort_field>', methods=['GET'])
+@app.route('/category', methods=['GET'])
+@app.route('/category/<scheme_category>', methods=['GET'])
+@app.route('/category/<scheme_category>/<header>', methods=['GET'])
+@app.route('/category/<scheme_category>/<header>/<sort_field>', methods=['GET'])
 def get_all_metrics_by_scheme_category(scheme_category='ELSS',header=5,sort_field='return(5yrs)'):
     mf = get_mf_details.MutualFunds()
     print(header)
@@ -42,10 +42,10 @@ def get_all_metrics_by_scheme_category(scheme_category='ELSS',header=5,sort_fiel
     all_mf = mf.get_all_metrics_by_scheme_category(scheme_category,sort_field,int(header))
     return all_mf.to_html()
 
-@app.route('/mf_performance_type', methods=['GET'])
-@app.route('/mf_performance_type/<scheme_type>', methods=['GET'])
-@app.route('/mf_performance_type/<scheme_type>/<header>', methods=['GET'])
-@app.route('/mf_performance_type/<scheme_type>/<header>/<sort_field>', methods=['GET'])
+@app.route('/type', methods=['GET'])
+@app.route('/type/<scheme_type>', methods=['GET'])
+@app.route('/type/<scheme_type>/<header>', methods=['GET'])
+@app.route('/type/<scheme_type>/<header>/<sort_field>', methods=['GET'])
 def get_all_metrics_by_scheme_type(scheme_type='Close Ended',header=5,sort_field='return(5yrs)'):
     mf = get_mf_details.MutualFunds()
     print(header)

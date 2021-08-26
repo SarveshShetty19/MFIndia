@@ -4,6 +4,7 @@ import datetime
 from pandas.tseries.offsets import BDay
 import re
 
+
 class MutualFunds:
 
     def __init__(self):
@@ -59,8 +60,7 @@ class MutualFunds:
         self.all_scheme_performance_calc = self.perform_calculation(self.all_scheme_performance)
         self.all_scheme_performance_calc = self.add_scheme_details(self.all_scheme_performance_calc)
         self.all_scheme_performance_calc = self.refine_columns(self.all_scheme_performance_calc)
-
-        print(self.all_scheme_performance_calc.columns)
+        self.all_scheme_performance_calc.fillna(0, inplace=True)
         return self.all_scheme_performance_calc.sort_values(by=self.sort_field,
                                                             ascending=False) if numcount == 'max' else self.all_scheme_performance_calc.sort_values(
             by=self.sort_field, ascending=False).head(numcount)
@@ -100,7 +100,7 @@ class MutualFunds:
         mf_columns = ['amc', 'scheme_code', 'scheme_nav_name', 'scheme_type', 'scheme_category', 'business_date', 'nav',
                       'scheme_minimum_amount', 'launch_date', '_closure_date']
 
-        return mf_with_scheme_details.loc[:, mf_columns].sort_values(by='business_date',ascending=False)
+        return mf_with_scheme_details.loc[:, mf_columns].sort_values(by='business_date', ascending=False)
 
     def filter_on_business_date(self, df, business_date):
         ''' filters a dataframe for a particular business_date '''
@@ -120,12 +120,8 @@ class MutualFunds:
         self.dataframes = [self.todays_scheme_details, self.scheme_details_one_years_ago,
                            self.scheme_details_two_years_ago, self.scheme_details_three_years_ago,
                            self.scheme_details_four_years_ago, self.scheme_details_five_years_ago]
-        # self.todays_scheme_details, self.scheme_details_one_years_ago, self.scheme_details_two_years_ago, self.scheme_details_three_years_ago,self.scheme_details_four_years_ago, self.scheme_details_five_years_ago = map(lambda suffix_dataframe,suffix: self.add_suffix(suffix_dataframe,suffix), self.dataframes,range(len(self.dataframes)))
-
-        # Merge dataframe to get current_nav,three_years_ago_nav and five_years_ago_nav
 
         self.scheme_performance = self.merge_dataframes(self.dataframes)
-
 
         self.scheme_performance.rename(columns={'nav_0yrs': 'nav', 'business_date_0yrs': 'business_date'}, inplace=True)
 
@@ -158,13 +154,13 @@ class MutualFunds:
     def merge_dataframes(self, dataframes):
         merge_tables = dataframes[0]
         for i in range(len(dataframes) - 1):
-            merge_tables = pd.merge(merge_tables, dataframes[i + 1],how='left', on=['scheme_nav_name', 'scheme_code'],
+            merge_tables = pd.merge(merge_tables, dataframes[i + 1], how='left', on=['scheme_nav_name', 'scheme_code'],
                                     suffixes=('_' + str(i) + 'yrs', '_' + str(i + 1) + 'yrs'))
         return merge_tables
 
     def refine_columns(self, scheme_details):
-        scheme_details.columns = [re.sub('cagr\((\w+)\)','return(\g<1>)',x) for x in scheme_details.columns ]
-        scheme_details.rename(columns = {'return(1yrs)':'return(1yr)'},inplace=True)
+        scheme_details.columns = [re.sub('cagr\((\w+)\)', 'return(\g<1>)', x) for x in scheme_details.columns]
+        scheme_details.rename(columns={'return(1yrs)': 'return(1yr)'}, inplace=True)
         mf_columns = ['amc', 'scheme_code', 'scheme_nav_name', 'scheme_type', 'scheme_category', 'business_date', 'nav',
                       'business_date_1yrs', 'return(1yr)', 'business_date_2yrs', 'return(2yrs)',
                       'business_date_3yrs', 'return(3yrs)', 'business_date_4yrs', 'return(4yrs)', 'business_date_5yrs',
@@ -177,8 +173,9 @@ if __name__ == "__main__":
     mf = MutualFunds()
     mutual_funds_list = ['Axis Liquid Fund - Direct Plan - Daily IDCW',
                          'UTI - Master Equity Plan Unit Scheme']
-    #mf_pd = mf.get_scheme_metrics(mutual_funds_list)
-    all_mf = mf.get_all_metrics('return(5yrs)', 300)
-    #scheme_history = mf.get_mf_history_with_scheme_details(mutual_funds_list)
-   # elss = mf.get_all_metrics_by_scheme_category('Growth','%return(5yrs)')
-    #print(elss)
+    mf_pd = mf.get_scheme_metrics(mutual_funds_list)
+    print(mf_pd)
+    # all_mf = mf.get_all_metrics('return(5yrs)', 300)
+    # scheme_history = mf.get_mf_history_with_scheme_details(mutual_funds_list)
+# elss = mf.get_all_metrics_by_scheme_category('Growth','%return(5yrs)')
+# print(elss)
