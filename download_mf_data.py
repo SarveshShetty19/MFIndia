@@ -31,7 +31,7 @@ class MutualFundsDownload:
         #Append the data for the dates where the data for mutual funds is missing.
         while self.start_date != self.end_date:
             if self.start_date.weekday() != 5 and self.start_date.weekday() != 6 and self.start_date not in self.existing_mf_dates_list:
-                self.delete_data(self.start_date)
+                self.delete_data(sql_parser.mutual_funds,self.start_date)
                 self.download_data(self.start_date)
                 self.start_date = self.start_date + datetime.timedelta(days=1)
                 self.__count += 1
@@ -52,10 +52,14 @@ class MutualFundsDownload:
         self.add_scheme_data['_closure_date'] = pd.to_datetime(self.add_scheme_data['_closure_date'], format='%d-%b-%Y')
         self.add_scheme_data.to_sql(sql_parser.mutual_funds_scheme, self.engine, index=False, if_exists='append')
 
-    def delete_data(self,day):
-        self.day = day
-        print("Deleting data for day {}".format(self.day))
-        self.delete_data = ''' delete from mf_india where business_date = '{}' '''.format(self.day)
+    def delete_data(self,table_name,day):
+        print("Deleting data for day {}".format(day))
+        self.delete_data = ''' delete from {} where business_date in ('{}') '''.format(table_name,day)
+        self.engine.execute(self.delete_data)
+
+    def delete_data_from(self,table_name,day):
+        print("Deleting data from day {}".format(day))
+        self.delete_data = ''' delete from {} where business_date > '{}' '''.format(table_name,day)
         self.engine.execute(self.delete_data)
 
 
@@ -82,6 +86,25 @@ class MutualFundsDownload:
         self.mf_data_frame.columns = [x.lower() for x in self.mf_data_frame.columns.str.replace(' ', '_')]
         self.mf_data_frame.to_sql(sql_parser.mutual_funds, self.engine, index=False, if_exists='append')
 
+    def check_data_quality(self,days):
+        self.mean_days = datetime.date.today() - datetime.timedelta(days=days)
+        self.delete_data_from(sql_parser.mf_quality_issues, self.mean_days)
+        business_query = '''select business_date,count(*)  as "counts"
+        from mf_india
+        where business_date > '{}'
+        group by business_date
+        order by business_date desc
+         '''.format(self.mean_days)
+        self.df = pd.read_sql(business_query, self.engine)
+        self.mean_22_days = self.df.groupby(self.df.index // 22).agg(['mean'])
+        self.df.index = self.df.index // 22
+        self.df['mean_22_days'] = self.mean_22_days
+        self.filt = self.df['counts'] < (self.df['mean_22_days'] - 1000)
+        self.quality_issues = self.df.loc[self.filt]['business_date'].to_list()
+        self.df['quality_issues'] = self.df['business_date'].apply(lambda x: 'Y' if x in self.quality_issues else 'N')
+        self.df.set_index('business_date', inplace=True)
+        self.df.to_sql(sql_parser.mf_quality_issues, self.engine, if_exists='append')
+
 
 
 
@@ -89,4 +112,5 @@ if __name__ == "__main__":
      mf = MutualFundsDownload()
      mf.download_mutual_fund_data(15)
      mf.download_scheme_details()
-     #mf.download_data('2021-08-19')
+     #mf.download_data('19-Aug-2021')
+     mf.check_data_quality(30)

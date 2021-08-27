@@ -16,13 +16,16 @@ class MutualFunds:
         self.fetch_existing_mf_dates = ''' select distinct [business_date] from {} '''.format(sql_parser.mutual_funds)
         self.existing_mf_dates = pd.read_sql(self.fetch_existing_mf_dates, self.engine)
         self.existing_mf_dates_list = self.existing_mf_dates['business_date'].dt.date.tolist()
+        self.fetch_quality_issues_business_dates  = '''select distinct [business_date] from {} where quality_issues='Y' '''.format(sql_parser.mf_quality_issues)
+        self.quality_issues_business_dates = pd.read_sql(self.fetch_quality_issues_business_dates,self.engine)
+        self.quality_issues_business_dates = self.quality_issues_business_dates['business_date'].dt.date.tolist()
         self.business_date = today
 
-        self.business_date_1yrs = self.check_business_date(today - BDay(262))
-        self.business_date_2yrs = self.check_business_date(today - BDay(524))
-        self.business_date_3yrs = self.check_business_date(today - BDay(786))
-        self.business_date_4yrs = self.check_business_date(today - BDay(1048))
-        self.business_date_5yrs = self.check_business_date(today - BDay(1310))
+        self.business_date_1yrs = self.validate_business_date(today - BDay(262))
+        self.business_date_2yrs = self.validate_business_date(today - BDay(524))
+        self.business_date_3yrs = self.validate_business_date(today - BDay(786))
+        self.business_date_4yrs = self.validate_business_date(today - BDay(1048))
+        self.business_date_5yrs = self.validate_business_date(today - BDay(1310))
 
         self.business_days = [self.business_date, self.business_date_1yrs, self.business_date_2yrs,
                               self.business_date_3yrs, \
@@ -31,8 +34,9 @@ class MutualFunds:
         self.business_date, self.business_date_1yrs, self.business_date_2yrs, self.business_date_3yrs, \
         self.business_date_4yrs, self.business_date_5yrs = map(lambda x: x.strftime('%Y-%m-%d'), self.business_days)
 
-    def check_business_date(self, business_date):
-        while business_date not in self.existing_mf_dates_list:
+    def validate_business_date(self, business_date):
+
+        while business_date not in self.existing_mf_dates_list and business_date not in self.quality_issues_business_dates:
             business_date = (business_date - BDay(2))
         return business_date
 
@@ -103,7 +107,7 @@ class MutualFunds:
         return mf_with_scheme_details.loc[:, mf_columns].sort_values(by='business_date', ascending=False)
 
     def filter_on_business_date(self, df, business_date):
-        ''' filters a dataframe for a particular business_date '''
+        ''' reutrns dataframe for a particular business date '''
         return df.loc[df['business_date'] == business_date]
 
     def get_cagr(self, current_nav, hist_nav, years):
@@ -111,7 +115,7 @@ class MutualFunds:
         return (current_nav / hist_nav) ** years - 1
 
     def perform_calculation(self, scheme_dataframe):
-        ''' This function is used to calculate cagr over 3 business days i.e today,3 years ago and 5 years ago '''
+        ''' This function is used to calculate cagr for past 5 years. '''
 
         # Filter out the dataframe on 3 business day i.e today,3 years ago and 5 years ago
         self.todays_scheme_details, self.scheme_details_one_years_ago, self.scheme_details_two_years_ago, self.scheme_details_three_years_ago, self.scheme_details_four_years_ago, self.scheme_details_five_years_ago = map(

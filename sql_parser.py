@@ -11,6 +11,7 @@ class sql_parser:
     db = sqlconfigparser['SQL']['db']
     mutual_funds = sqlconfigparser['Tables']['Mutual_Funds']
     mutual_funds_scheme = sqlconfigparser['Tables']['Mutual_Funds_Scheme']
+    mf_quality_issues = sqlconfigparser['Tables']['Mutual_Funds_Quality']
 
     @classmethod
     def engine(cls):
