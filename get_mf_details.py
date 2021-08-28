@@ -1,23 +1,56 @@
-import pandas as pd
-from sql_parser import sql_parser
+''' The module is used to get the performance of single mutual fund or all the mutual fund.
+We can also get the history of any mutual fund.
+'''
+
 import datetime
-from pandas.tseries.offsets import BDay
 import re
+import pandas as pd
+from pandas.tseries.offsets import BDay
+from sql_parser import sql_parser
 
 
 class MutualFunds:
+    ''' Can be used to get the performance of all mutual funds or a single mutual fund. '''
+
+    # pylint: disable=too-many-instance-attributes
+    # 34 is reasonable in this case.
 
     def __init__(self):
         self.engine = sql_parser.engine()
         self.today = (datetime.date.today() - BDay())
         self.initalize_business_days(self.today)
+        self.mutual_fund_list = None
+        self.scheme_details = None
+        self.scheme_performance = None
+        self.sort_field = None
+        self.get_all_mf_performance = None
+        self.all_scheme_performance_calc = None
+        self.all_metrics = None
+        self.filt = None
+        self.get_scheme_code = None
+        self.scheme_code = None
+        self.get_scheme_details = None
+        self.scheme_details_one_years_ago = None
+        self.scheme_details_two_years_ago = None
+        self.scheme_details_three_years_ago = None
+        self.scheme_details_four_years_ago = None
+        self.scheme_details_five_years_ago = None
+        self.dataframes = None
+        self.added_scheme_details = None
+        self.all_scheme_performance = None
+        self.todays_scheme_details = None
 
     def initalize_business_days(self, today):
-        self.fetch_existing_mf_dates = ''' select distinct [business_date] from {} '''.format(sql_parser.mutual_funds)
+        '''Used to initalized business days i.e today,1 year ago ...5year ago '''
+        self.fetch_existing_mf_dates = ''' select distinct [business_date] 
+                                           from {} '''.format(sql_parser.mutual_funds)
         self.existing_mf_dates = pd.read_sql(self.fetch_existing_mf_dates, self.engine)
         self.existing_mf_dates_list = self.existing_mf_dates['business_date'].dt.date.tolist()
-        self.fetch_quality_issues_business_dates  = '''select distinct [business_date] from {} where quality_issues='Y' '''.format(sql_parser.mf_quality_issues)
-        self.quality_issues_business_dates = pd.read_sql(self.fetch_quality_issues_business_dates,self.engine)
+        self.fetch_quality_issues_business_dates = \
+            '''select distinct [business_date] 
+               from {} 
+               where quality_issues='Y' '''.format(sql_parser.mf_quality_issues)
+        self.quality_issues_business_dates = pd.read_sql(self.fetch_quality_issues_business_dates, self.engine)
         self.quality_issues_business_dates = self.quality_issues_business_dates['business_date'].dt.date.tolist()
         self.business_date = today
 
@@ -28,19 +61,22 @@ class MutualFunds:
         self.business_date_5yrs = self.validate_business_date(today - BDay(1310))
 
         self.business_days = [self.business_date, self.business_date_1yrs, self.business_date_2yrs,
-                              self.business_date_3yrs, \
+                              self.business_date_3yrs,
                               self.business_date_4yrs, self.business_date_5yrs]
 
         self.business_date, self.business_date_1yrs, self.business_date_2yrs, self.business_date_3yrs, \
         self.business_date_4yrs, self.business_date_5yrs = map(lambda x: x.strftime('%Y-%m-%d'), self.business_days)
 
     def validate_business_date(self, business_date):
-
-        while business_date not in self.existing_mf_dates_list and business_date not in self.quality_issues_business_dates:
-            business_date = (business_date - BDay(2))
+        ''' Checks if the business_date is present in our database and
+        also validates if the business date has enough data'''
+        while business_date not in self.existing_mf_dates_list or business_date in self.quality_issues_business_dates:
+            business_date = (business_date - BDay(1))
         return business_date
 
-    def convert_date_to_string(self, business_date):
+    @staticmethod
+    def convert_date_to_string(business_date):
+        ''' Converts a date to string format %Y-%m-%d '''
         return business_date.strftime('%Y-%m-%d')
 
     def get_scheme_metrics(self, mutual_fund_list=None):
@@ -53,13 +89,13 @@ class MutualFunds:
         return self.scheme_performance
 
     def get_all_metrics(self, sort_field, numcount=5):
-
         ''' Gives perfroamnce metrics for all mutual funds limited to the numcount value
         and 3 business days i.e today,3 years ago and 5 years ago'''
         self.sort_field = sort_field
-        self.get_all_mf_performance = '''select business_date,nav,scheme_nav_name,scheme_code from {} where business_date in ({})'''.format(
-            sql_parser.mutual_funds,
-            ",".join("?" for _ in self.business_days))
+        self.get_all_mf_performance = '''select business_date,nav,scheme_nav_name,scheme_code 
+                                         from {} 
+                                         where business_date in ({})''' \
+            .format(sql_parser.mutual_funds, ",".join("?" for _ in self.business_days))
         self.all_scheme_performance = pd.read_sql(self.get_all_mf_performance, self.engine, params=self.business_days)
         self.all_scheme_performance_calc = self.perform_calculation(self.all_scheme_performance)
         self.all_scheme_performance_calc = self.add_scheme_details(self.all_scheme_performance_calc)
@@ -70,12 +106,14 @@ class MutualFunds:
             by=self.sort_field, ascending=False).head(numcount)
 
     def get_all_metrics_by_scheme_category(self, scheme_category, sort_field, numcount=5):
+        ''' Gives performance metrics based on the scheme like ELSS etc.'''
         self.all_metrics = self.get_all_metrics(sort_field, 'max')
         self.filt = self.all_metrics['scheme_category'] == scheme_category
         self.all_metrics = self.all_metrics.loc[self.filt]
         return self.all_metrics.sort_values(by=sort_field, ascending=False).head(numcount)
 
     def get_all_metrics_by_scheme_type(self, scheme_type, sort_field, numcount=5):
+        '''Gives performance metrics based on scheme_type i.e Open ended or Close Ended'''
         self.all_metrics = self.get_all_metrics('return(5yrs)', 'max')
         self.filt = self.all_metrics['scheme_type'] == scheme_type
         self.all_metrics = self.all_metrics.loc[self.filt]
@@ -86,18 +124,21 @@ class MutualFunds:
         ''' Gives the historical data for the given mutual funds  '''
 
         self.mutual_fund_list = mutual_fund_list
-        self.get_scheme_code = '''select code from {} where scheme_nav_name in ({}) '''.format(
-            sql_parser.mutual_funds_scheme,
-            ",".join(['?' for _ in self.mutual_fund_list]))
+        self.get_scheme_code = '''select code 
+                                  from {} 
+                                  where scheme_nav_name in ({}) ''' \
+            .format(sql_parser.mutual_funds_scheme, ",".join(['?' for _ in self.mutual_fund_list]))
         self.scheme_code = pd.read_sql(self.get_scheme_code, self.engine, params=[self.mutual_fund_list])
         self.scheme_code = self.scheme_code.loc[:, 'code'].tolist()
-        self.get_scheme_details = ''' select business_date,nav,scheme_nav_name,scheme_code from {} where scheme_code in ({})'''.format(
-            sql_parser.mutual_funds,
-            ",".join(['?' for _ in self.scheme_code]))
+        self.get_scheme_details = ''' select business_date,nav,scheme_nfav_name,scheme_code 
+                                      from {} 
+                                      where scheme_code in ({})''' \
+            .format(sql_parser.mutual_funds, ",".join(['?' for _ in self.scheme_code]))
         self.scheme_details = pd.read_sql(self.get_scheme_details, self.engine, params=[self.scheme_code])
         return self.scheme_details
 
     def get_mf_history_with_scheme_details(self, mutual_fund_list=None):
+        ''' Adds scheme dettails to get_mf_history'''
         self.mutual_fund_list = mutual_fund_list
         mf_history = self.get_mf_history(mutual_fund_list)
         mf_with_scheme_details = self.add_scheme_details(mf_history)
@@ -106,11 +147,13 @@ class MutualFunds:
 
         return mf_with_scheme_details.loc[:, mf_columns].sort_values(by='business_date', ascending=False)
 
-    def filter_on_business_date(self, df, business_date):
+    @staticmethod
+    def filter_on_business_date(dataframe, business_date):
         ''' reutrns dataframe for a particular business date '''
-        return df.loc[df['business_date'] == business_date]
+        return dataframe.loc[dataframe['business_date'] == business_date]
 
-    def get_cagr(self, current_nav, hist_nav, years):
+    @staticmethod
+    def get_cagr(current_nav, hist_nav, years):
         ''' retyrns cagr '''
         return (current_nav / hist_nav) ** years - 1
 
@@ -147,6 +190,7 @@ class MutualFunds:
         return self.scheme_performance
 
     def add_scheme_details(self, scheme_dataframe):
+        ''' Adds scheme details to a given dataframe '''
         self.get_scheme_details = ''' select * from {}'''.format(sql_parser.mutual_funds_scheme)
         self.scheme_details = pd.read_sql(self.get_scheme_details, self.engine)
 
@@ -155,22 +199,29 @@ class MutualFunds:
                                              on=['scheme_code', 'scheme_nav_name'])
         return self.added_scheme_details
 
-    def merge_dataframes(self, dataframes):
+    @staticmethod
+    def merge_dataframes(dataframes):
+        ''' Merges the dataframe based on scheme_nav_name and scheme_code '''
         merge_tables = dataframes[0]
         for i in range(len(dataframes) - 1):
-            merge_tables = pd.merge(merge_tables, dataframes[i + 1], how='left', on=['scheme_nav_name', 'scheme_code'],
+            merge_tables = pd.merge(merge_tables, dataframes[i + 1],
+                                    how='left',
+                                    on=['scheme_nav_name', 'scheme_code'],
                                     suffixes=('_' + str(i) + 'yrs', '_' + str(i + 1) + 'yrs'))
         return merge_tables
 
-    def refine_columns(self, scheme_details):
-        scheme_details.columns = [re.sub('cagr\((\w+)\)', 'return(\g<1>)', x) for x in scheme_details.columns]
+    @staticmethod
+    def refine_columns(scheme_details):
+        ''' filter the columns as given in mf_columns '''
+        scheme_details.columns = [re.sub(r'cagr((\w+))', 'return(\g<1>)', x) for x in scheme_details.columns]
         scheme_details.rename(columns={'return(1yrs)': 'return(1yr)'}, inplace=True)
-        mf_columns = ['amc', 'scheme_code', 'scheme_nav_name', 'scheme_type', 'scheme_category', 'business_date', 'nav',
-                      'business_date_1yrs', 'return(1yr)', 'business_date_2yrs', 'return(2yrs)',
-                      'business_date_3yrs', 'return(3yrs)', 'business_date_4yrs', 'return(4yrs)', 'business_date_5yrs',
-                      'return(5yrs)', 'scheme_minimum_amount',
-                      'launch_date', '_closure_date']
-        return scheme_details.loc[:, mf_columns]
+        # mf_columns = ['amc', 'scheme_code', 'scheme_nav_name', 'scheme_type', 'scheme_category', 'business_date', 'nav',
+        #               'business_date_1yrs', 'return(1yr)', 'business_date_2yrs', 'return(2yrs)',
+        #               'business_date_3yrs', 'return(3yrs)', 'business_date_4yrs', 'return(4yrs)', 'business_date_5yrs',
+        #               'return(5yrs)', 'scheme_minimum_amount',
+        #               'launch_date', '_closure_date']
+        return scheme_details
+        # return scheme_details.loc[:, mf_columns]
 
 
 if __name__ == "__main__":

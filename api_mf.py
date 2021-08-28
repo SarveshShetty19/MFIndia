@@ -14,8 +14,8 @@ def home():
 
 # A route to return all of the available entries in our catalog.
 @app.route('/performance', methods=['GET'])
-@app.route('/performance/<header>', methods=['GET'])
-@app.route('/performance/<header>/<sort_field>', methods=['GET'])
+@app.route('/performance/<sort_field>', methods=['GET'])
+@app.route('/performance/<sort_field>/<header>', methods=['GET'])
 def api_all(header=5,sort_field='return(5yrs)'):
     mf = get_mf_details.MutualFunds()
     print(header)
