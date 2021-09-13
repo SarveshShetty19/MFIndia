@@ -24,7 +24,7 @@ Scripts :-
 
 **api_mf.py** - This script contains the api for getting the performance of mutual funds.
 
-**mf_dashboard.py **- This script is used to populate the dashboard using plotly and dash.
+**mf_dashboard.py ** - This script is used to populate the dashboard using plotly and dash.
 
 
 
