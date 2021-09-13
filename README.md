@@ -8,7 +8,9 @@ The data is downloaded in our database using download_mf_data.py.
 There are 3 main tables.
 
 Mutual_Funds - This is the main table which contains the nav of all the mutual funds
+
 Mutual_Funds_Scheme - This is the table which contains the scheme details of the mutual funds
+
 Mutual_Funds_Quality - This table flags the business_dates which has quality issues.
 
 get_mf_details.py - This script is used to get the performance metrics for mutual funds.
