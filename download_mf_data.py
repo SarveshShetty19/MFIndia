@@ -165,7 +165,7 @@ class MutualFundsDownload:
         mf_data_frame.to_sql(sql_parser.mutual_funds, self.engine, index=False, if_exists='append')
 
     def check_data_quality(self, days):
-        ''' -- Needs more improvement.
+        """ -- Needs more improvement.
             Checks the quality of the data present in sql_parser.mutual_funds.
             This is required as many times,the quality of data retrieve from amfindia is not good.
             Basically function gets the mean of last 22 days
@@ -181,12 +181,6 @@ class MutualFundsDownload:
             Raises:
                 N.A
         """
-
-        Checks the quality of the data.
-        We have created a table sql_parser.mf_quality_issues that tags quality_issue as "Y" if the date has a quality issue.
-        This is done by comparing the data loaded for current date with the average value of last 22 days.
-        days - The number of days that quality needs to be checked for '''
-
         mean_days = datetime.date.today() - datetime.timedelta(days=days)
         print(mean_days)
         self.delete_data_from(sql_parser.mf_quality_issues, mean_days)
@@ -213,3 +207,4 @@ if __name__ == "__main__":
     mf.download_mutual_fund_data(15)
     mf.download_scheme_details()
     mf.check_data_quality(22)
+

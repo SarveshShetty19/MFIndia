@@ -9,10 +9,6 @@ imports :
   mf = MutualFunds()
 """
 
-''' The module is used to get the performance of single mutual fund or all the mutual fund.
-We can also get the history of any mutual fund.
-'''
-
 import datetime
 import re
 import pandas as pd
@@ -98,7 +94,7 @@ class MutualFunds:
             mutual_fund_list - The list of mutual funds whose performance needs to be calculated.
 
             Returns:
-                A dataframe with business_date,scheme_nav_name and absolute returns.
+                A dataframe with nav history of the mutual fund.
             Raises:
                 N.A
         """
@@ -117,7 +113,7 @@ class MutualFunds:
             Args:
                 mutual_fund_list - The list of mutual funds whose performance metrics is needed.
             Returns:
-                all_scheme_performance_calc - A dataframe which has business_date,nav,cagr for last 5 years.
+                scheme_performance - A dataframe which has business_date,nav,cagr for last 5 years.
             Raises:
                 N.A
         """
@@ -149,6 +145,7 @@ class MutualFunds:
         all_scheme_performance_calc = self.add_scheme_details(all_scheme_performance_calc)
         all_scheme_performance_calc = self.refine_columns(all_scheme_performance_calc)
         all_scheme_performance_calc.fillna(0, inplace=True)
+
         if scheme_category and scheme_type:
             filt = (all_scheme_performance_calc['scheme_category'] == scheme_category) & (all_scheme_performance_calc['scheme_type'] == scheme_type)
             all_scheme_performance_calc = all_scheme_performance_calc.loc[filt]
@@ -174,7 +171,6 @@ class MutualFunds:
         df2 = df1.copy(deep=True)
         df1["comparision_business_date"] = df1["business_date"].apply(lambda x: x - BDay(262))
         df = pd.merge(df1, df2, how='inner',left_on=['comparision_business_date','scheme_code'], right_on=['business_date','scheme_code'],suffixes=('_l', '_r'))
-        #df =  df1.set_index(['comparision_business_date','scheme_code']).join(df2.set_index(['business_date','scheme_code']),how='inner', lsuffix='_l', rsuffix='_r')
         df["absolute_returns"] = (df["nav_l"] - df["nav_r"]) / df["nav_r"] * 100
         df.dropna(inplace=True)
         df.reset_index(drop=True,inplace=True)
@@ -304,7 +300,7 @@ class MutualFunds:
         """
         dataframe.columns = [re.sub('cagr\((\w+)\)', 'return(\g<1>)', x) for x in dataframe.columns]
         dataframe.rename(columns={'return(1yrs)': 'return(1yr)','scheme_nav_name':'Fund Name'}, inplace=True)
-        return dataframe.loc[:,["business_date","Fund Name","return(1yr)","return(2yrs)","return(3yrs)","return(4yrs)","return(5yrs)"]]
+        return dataframe.loc[:,["business_date","Fund Name","scheme_category","scheme_type","return(1yr)","return(2yrs)","return(3yrs)","return(4yrs)","return(5yrs)"]]
 
     def load_mf_scheme_details(self):
         """ Loads all the data from table mutual_funds_scheme
@@ -324,6 +320,6 @@ if __name__ == "__main__":
     mutual_funds_list = ['Axis Long Term Equity Fund - Regular Plan - Growth']
     mf_pd = mf.get_scheme_metrics(mutual_funds_list)
     df = mf.get_absolute_returns(mutual_funds_list)
-    print(df)
+    df = mf.get_all_metrics('return(5yrs)', 'Equity Scheme - ELSS')
 
 
