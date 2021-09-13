@@ -92,24 +92,60 @@ class MutualFunds:
             business_date = (business_date - BDay(1))
         return business_date
 
+    def get_mf_history(self,mutual_fund_list):
+        """ Gives performance history of selected mutual fund..
+            Args:
+            mutual_fund_list - The list of mutual funds whose performance needs to be calculated.
+
+            Returns:
+                A dataframe with business_date,scheme_nav_name and absolute returns.
+            Raises:
+                N.A
+        """
+        get_scheme_code = '''select code 
+                                          from {} 
+                                          where scheme_nav_name in ({}) ''' \
+            .format(sql_parser.mutual_funds_scheme, ",".join(['?' for _ in mutual_fund_list]))
+        scheme_code = pd.read_sql(get_scheme_code, self.engine, params=[mutual_fund_list])
+        scheme_code = scheme_code.loc[:, 'code'].to_list()
+        get_performance_history = ''' select scheme_code, scheme_nav_name, nav, business_date from mf_india where 
+                scheme_code in ({}) '''.format(",".join(['?' for _ in scheme_code]))
+        return pd.read_sql(get_performance_history, self.engine, params=[scheme_code])
+
     def get_scheme_metrics(self, mutual_fund_list=None):
-        ''' Gives performance metrics for the given mutual funds '''
-        scheme_details = self.get_mf_history(mutual_fund_list)
-        scheme_performance = self.perform_calculation(scheme_details)
-        print(scheme_performance)
+        """ Gives performance metrics for last 5 years for selected mutual funds.
+            Args:
+                mutual_fund_list - The list of mutual funds whose performance metrics is needed.
+            Returns:
+                all_scheme_performance_calc - A dataframe which has business_date,nav,cagr for last 5 years.
+            Raises:
+                N.A
+        """
+        scheme_history = self.get_mf_history(mutual_fund_list)
+        scheme_performance = self.perform_cagr_calculation(scheme_history)
         scheme_performance = self.add_scheme_details(scheme_performance)
         scheme_performance = self.refine_columns(scheme_performance)
         return scheme_performance
 
     def get_all_metrics(self, sort_field,scheme_category=None,scheme_type =None, numcount=5):
-        ''' Gives perfroamnce metrics for all mutual funds limited to the numcount value
-        and 3 business days i.e today,3 years ago and 5 years ago'''
+        """ Gives performance metrics for last 5 years for all mutual funds.
+            Args:
+                sort_field - sorts according to the field passed in this category.
+                scheme_category - gives performance only for the selected scheme_category
+                scheme_type - gives performance only for the selected scheme_type
+                numcount - Limits the output to the number of rows passed in this parameter.
+
+            Returns:
+                all_scheme_performance_calc - A dataframe which has business_date,nav,cagr for last 5 years for all the mutual funds.
+            Raises:
+                N.A
+        """
         get_all_mf_performance = '''select business_date,nav,scheme_nav_name,scheme_code 
                                          from {} 
                                          where business_date in ({})''' \
             .format(sql_parser.mutual_funds, ",".join("?" for _ in self.business_days))
         all_scheme_performance = pd.read_sql(get_all_mf_performance, self.engine, params=self.business_days)
-        all_scheme_performance_calc = self.perform_calculation(all_scheme_performance)
+        all_scheme_performance_calc = self.perform_cagr_calculation(all_scheme_performance)
         all_scheme_performance_calc = self.add_scheme_details(all_scheme_performance_calc)
         all_scheme_performance_calc = self.refine_columns(all_scheme_performance_calc)
         all_scheme_performance_calc.fillna(0, inplace=True)
@@ -124,43 +160,17 @@ class MutualFunds:
             all_scheme_performance_calc = all_scheme_performance_calc.loc[filt]
         return all_scheme_performance_calc.sort_values(by=sort_field,ascending=False).head(numcount)
 
-    def get_mf_history(self, mutual_fund_list=None):
-        ''' Gives the historical data for the given mutual funds  '''
-        get_scheme_code = '''select code 
-                                  from {} 
-                                  where scheme_nav_name in ({}) ''' \
-            .format(sql_parser.mutual_funds_scheme, ",".join(['?' for _ in mutual_fund_list]))
-            #.format(sql_parser.mutual_funds_scheme, "?")
-        scheme_code = pd.read_sql(get_scheme_code, self.engine, params=[mutual_fund_list])
-        scheme_code = scheme_code.loc[:, 'code'].tolist()
-        get_scheme_details = ''' select business_date,nav,scheme_nav_name,scheme_code 
-                                      from {} 
-                                      where scheme_code in ({})''' \
-            .format(sql_parser.mutual_funds, ",".join(['?' for _ in scheme_code]))
-            #.format(sql_parser.mutual_funds, "?")
+    def get_absolute_returns(self,mutual_fund_list=None):
+        """ Gets absolute returns for the list of mutual funds.
+            Args:
+            mutual_fund_list - The list of mutual funds whose performance needs to be calculated.
 
-        scheme_details = pd.read_sql(get_scheme_details, self.engine, params=[scheme_code])
-        return scheme_details
-
-    def get_mf_history_with_scheme_details(self, mutual_fund):
-        ''' Adds scheme dettails to get_mf_history'''
-        mf_history = self.get_mf_history(mutual_fund)
-        mf_with_scheme_details = self.add_scheme_details(mf_history)
-        mf_columns = ['amc', 'scheme_code', 'scheme_nav_name', 'scheme_type', 'scheme_category', 'business_date', 'nav',
-                      'scheme_minimum_amount', 'launch_date', '_closure_date']
-
-        return mf_with_scheme_details.loc[:, mf_columns].sort_values(by='business_date', ascending=False)
-
-    def get_mf_performance_history(self,mutual_fund_list=None):
-        get_scheme_code = '''select code 
-                                  from {} 
-                                  where scheme_nav_name in ({}) ''' \
-            .format(sql_parser.mutual_funds_scheme, ",".join(['?' for _ in mutual_fund_list]))
-        scheme_code = pd.read_sql(get_scheme_code, self.engine,params=[mutual_fund_list])
-        scheme_code = scheme_code.loc[:, 'code'].to_list()
-        get_performance_history = ''' select scheme_code, scheme_nav_name, nav, business_date from mf_india where 
-        scheme_code in ({}) '''.format(",".join(['?' for _ in scheme_code]))
-        df1 = pd.read_sql(get_performance_history, self.engine,params=[scheme_code])
+            Returns:
+                A dataframe with business_date,scheme_nav_name and absolute returns.
+            Raises:
+                N.A
+        """
+        df1 = self.get_mf_history(mutual_fund_list)
         df2 = df1.copy(deep=True)
         df1["comparision_business_date"] = df1["business_date"].apply(lambda x: x - BDay(262))
         df = pd.merge(df1, df2, how='inner',left_on=['comparision_business_date','scheme_code'], right_on=['business_date','scheme_code'],suffixes=('_l', '_r'))
@@ -168,29 +178,48 @@ class MutualFunds:
         df["absolute_returns"] = (df["nav_l"] - df["nav_r"]) / df["nav_r"] * 100
         df.dropna(inplace=True)
         df.reset_index(drop=True,inplace=True)
-        print(df.columns)
         df = df.sort_values(by="business_date_l",ascending=False)
 
         return df.loc[:,["business_date_l","scheme_nav_name_l","absolute_returns"]]
 
-
-
     @staticmethod
     def filter_on_business_date(dataframe, business_date):
-        ''' reutrns dataframe for a particular business date '''
+        """ Filter a dataframe on a particular business_date
+            Args:
+            dataframe - The dataframe that needs to be filter.
+            business_date - the business_date dataframe needs to be filtered for
+            Returns:
+                The dataframe filtered on the business_date passed.
+            Raises:
+                N.A
+        """
         return dataframe.loc[dataframe['business_date'] == business_date]
 
     @staticmethod
     def get_cagr(current_nav, hist_nav, years):
-        ''' retyrns cagr '''
+        """ Function for calculating cagr.
+            Args:
+            current_nav - The latest nav for the mutual fund.
+            hist_nav - The historical nav for the mutual fund.
+            years - The number of years the cagr needs to be calculated for.
+            Returns:
+                cagr value.
+            Raises:
+                N.A
+        """
         #return ((current_nav / hist_nav) ** (1 / years)) - 1
         return ((current_nav / hist_nav) ** (1 / years) - 1) * 100
 
-    def perform_calculation(self, scheme_dataframe):
-        ''' This function is used to calculate cagr for past 5 years. '''
+    def perform_cagr_calculation(self, scheme_dataframe):
+        """ Function for calculating cagr for last 5 years.
+            Args:
+            scheme_dataframe - The dataframe which included nav history of the mutual fund.
+            Returns:
+            scheme_performance - A dataframe with calculated value for last 5 years.
+            Raises:
+                N.A
+        """
 
-        print(scheme_dataframe.loc[scheme_dataframe["business_date"] == "2021-09-10"])
-        # filter out the dataframe on 3 business day i.e today,3 years ago and 5 years ago
         todays_scheme_details, \
         scheme_details_one_years_ago, \
         scheme_details_two_years_ago, \
@@ -207,11 +236,8 @@ class MutualFunds:
                       scheme_details_six_years_ago]
 
         scheme_performance = self.merge_dataframes(dataframes)
-        print(f"Columns in scheme_performance after merge {scheme_performance.columns}")
 
         scheme_performance.rename(columns={'nav_0yrs': 'nav', 'business_date_0yrs': 'business_date'}, inplace=True)
-        print(scheme_performance['nav'])
-        print(scheme_performance['nav_1yrs'])
 
         scheme_performance['cagr(1yrs)'] = self.get_cagr(scheme_performance['nav'],
                                                               scheme_performance['nav_1yrs'], 1)
@@ -231,7 +257,15 @@ class MutualFunds:
         return scheme_performance
 
     def add_scheme_details(self, scheme_dataframe):
-        ''' Adds scheme details to a given dataframe '''
+        """ Adds scheme_details like the scheme_type,scheme_category to exisitng datamframe
+            Args:
+            scheme_dataframe - The dataframe for which scheme_details needs to be added.
+            Returns:
+            added_scheme_details - A dataframe with added scheme_details.
+            Raises:
+                N.A
+        """
+
         get_scheme_details = ''' select * from {}'''.format(sql_parser.mutual_funds_scheme)
         scheme_details = pd.read_sql(get_scheme_details, self.engine)
 
@@ -242,7 +276,14 @@ class MutualFunds:
 
     @staticmethod
     def merge_dataframes(dataframes):
-        ''' Merges the dataframe based on scheme_nav_name and scheme_code '''
+        """ Merges the list of dataframe that is passed to this function
+            Args:
+            dataframes - A list containing dataframes.
+            Returns:
+            merge_tables - a merged dataframe.
+            Raises:
+                N.A
+        """
         merge_tables = dataframes[len(dataframes)-1]
         for i in range(len(dataframes)-1,0,-1):
             merge_tables = pd.merge(merge_tables, dataframes[i - 1],
@@ -252,22 +293,28 @@ class MutualFunds:
         return merge_tables
 
     @staticmethod
-    def refine_columns(scheme_details):
-        ''' filter the columns as given in mf_columns '''
-        scheme_details.columns = [re.sub('cagr\((\w+)\)', 'return(\g<1>)', x) for x in scheme_details.columns]
-        scheme_details.rename(columns={'return(1yrs)': 'return(1yr)','scheme_nav_name':'Fund Name'}, inplace=True)
-        # mf_columns = ['amc', 'scheme_code', 'scheme_nav_name', 'scheme_type', 'scheme_category', 'business_date', 'nav',
-        #               'business_date_1yrs', 'return(1yr)', 'business_date_2yrs', 'return(2yrs)',
-        #               'business_date_3yrs', 'return(3yrs)', 'business_date_4yrs', 'return(4yrs)', 'business_date_5yrs',
-        #               'return(5yrs)', 'scheme_minimum_amount',
-        #               'launch_date', '_closure_date']
-
-
-        return scheme_details.loc[:,["business_date","Fund Name","return(1yr)","return(2yrs)","return(3yrs)","return(4yrs)","return(5yrs)"]]
-        # return scheme_details.loc[:, mf_columns]
-
+    def refine_columns(dataframe):
+        """  Limit the column of dataframe to ["business_date","Fund Name","return(1yr)","return(2yrs)","return(3yrs)","return(4yrs)","return(5yrs)"]
+            Args:
+            dataframe - The dataframe whose column needs to be filters.
+            Returns:
+            dataframe - filtered dataframe.
+            Raises:
+                N.A
+        """
+        dataframe.columns = [re.sub('cagr\((\w+)\)', 'return(\g<1>)', x) for x in dataframe.columns]
+        dataframe.rename(columns={'return(1yrs)': 'return(1yr)','scheme_nav_name':'Fund Name'}, inplace=True)
+        return dataframe.loc[:,["business_date","Fund Name","return(1yr)","return(2yrs)","return(3yrs)","return(4yrs)","return(5yrs)"]]
 
     def load_mf_scheme_details(self):
+        """ Loads all the data from table mutual_funds_scheme
+            Args:
+            N.A
+            Returns:
+            A datfarme with loaded values of mutual_funds_scheme
+            Raises:
+                N.A
+        """
         get_mf_list = '''select *  from {}'''.format(sql_parser.mutual_funds_scheme)
         return pd.read_sql(get_mf_list,self.engine)
 
@@ -276,6 +323,7 @@ if __name__ == "__main__":
     mf = MutualFunds()
     mutual_funds_list = ['Axis Long Term Equity Fund - Regular Plan - Growth']
     mf_pd = mf.get_scheme_metrics(mutual_funds_list)
-    df = mf.get_mf_performance_history(mutual_funds_list)
+    df = mf.get_absolute_returns(mutual_funds_list)
+    print(df)
 
 
