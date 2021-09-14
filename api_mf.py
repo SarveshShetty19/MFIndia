@@ -20,7 +20,7 @@ def home():
 
 @app.route('/performance', methods=['GET'])
 def api_performance():
-    """ returns performance of all the mutual funds.
+    """ returns cagr of all the mutual funds.
             Usage:
             /performance/head/sort_by/scheme_category/scheme_type
             Args:
@@ -42,7 +42,7 @@ def api_performance():
 
 @app.route('/fund_performance', methods=['GET'])
 def api_fund_performance(mflist=['Axis Long Term Equity Fund - Direct Plan - Growth Option']):
-    """ returns performance of selected funds.
+    """ returns cagr of selected funds.
             Usage:
             /performance/head/sort_by/scheme_category/scheme_type
             Args:
