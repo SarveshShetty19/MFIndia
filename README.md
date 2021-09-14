@@ -2,7 +2,7 @@
 
 The MFIndia comparision dashboard is used to compare the returns of the selected mutual funds under a particular scheme_category.
 
-![alt text](https://github.com/SarveshShetty19/MFIndia/blob/050f84a519ef1d04ad38c37ce5ad8ff58ba97e8a/Web%20capture_13-9-2021_23111_127.0.0.1.jpeg)
+![alt text](https://github.com/SarveshShetty19/MFIndia/blob/f31d03928d501dc6b011f6011fb2831357d56d36/MFIndia_Dashboard.jpeg)
 
 The data is downloaded in  database server using **download_mf_data.py** .
 You need to create a new file named server_config.ini ( There is a template already server_config_template.ini)
